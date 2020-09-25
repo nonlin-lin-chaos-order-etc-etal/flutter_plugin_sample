@@ -1,10 +1,16 @@
+#include <stdexcept>
+
+#include <string>       // std::string
+#include <iostream>     // std::cout
+#include <sstream>      // std::stringstream, std::stringbuf
+
+#include <string.h>
+
 #include "include/flutter_crash_sample_plugin/flutter_crash_sample_plugin.h"
 
 #include <flutter_linux/flutter_linux.h>
 #include <gtk/gtk.h>
 #include <sys/utsname.h>
-
-#include <stdexcept>
 
 #define FLUTTER_CRASH_SAMPLE_PLUGIN(obj) \
   (G_TYPE_CHECK_INSTANCE_CAST((obj), flutter_crash_sample_plugin_get_type(), \
@@ -24,21 +30,26 @@ static void flutter_crash_sample_plugin_handle_method_call(
 
   const gchar* method = fl_method_call_get_name(method_call);
 
+  bool err=false;
+
   if (strcmp(method, "sampleMethod") == 0) {
     try {
         throw std::runtime_error("test_cpp_exception");
-        g_autofree gchar *version = g_strdup_printf("42!");
+        g_autofree gchar *version = g_strdup_printf("%s", "42");
         g_autoptr(FlValue) result = fl_value_new_string(version);
         response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
     } catch(std::runtime_error & ex) {
-        g_autofree gchar *version = g_strdup_printf("error: %s", ex.what());
-        g_autoptr(FlValue) result = fl_value_new_string(version);
-        response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+        err = true;
     }
   } else {
     response = FL_METHOD_RESPONSE(fl_method_not_implemented_response_new());
   }
 
+  if(err){
+      g_autofree gchar *version = g_strdup_printf("exception");
+      g_autoptr(FlValue) result = fl_value_new_string(version);
+      response = FL_METHOD_RESPONSE(fl_method_success_response_new(result));
+  }
   fl_method_call_respond(method_call, response, nullptr);
 }
 
